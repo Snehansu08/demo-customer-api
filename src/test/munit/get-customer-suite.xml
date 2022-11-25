@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="get-customer-suite.xml" />
+	<munit:test name="get-customer-info-suite-positive-test" doc:id="11297642-71a3-45d7-b381-afa9f0356ac2" description="Validate if customer information is available when query with customer id.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:get-document" doc:id="6b452729-5bc9-4318-8d98-bc46a3a90cff" processor="azure-cosmos-db-connector-mule-4:get-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="a7ab4142-3984-4731-80e0-a43a74aaa069" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:payload value="#[MunitTools::getResourceAsString('munit/db_response.json')]" mediaType="application/json" />
+				</munit-tools:then-return>
+
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="4d26ee90-1f1c-49f6-b3c5-9b0d3e3a03c1" >
+				<munit:attributes value="#[{uriParams : { customerId : '4d4de7d6-7f5e-4778-9c70-babba6c25c55'}}]" />
+			</munit:set-event>
+			<flow-ref doc:name="get:\customer\(customerId):customer-api-config" doc:id="51961aea-083d-4a02-b2ac-bffefa9b6357" name="get:\customer\(customerId):customer-api-config"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="5037aacd-ba35-48f4-971e-8149af838238" expression="#[payload]" is='#[MunitTools::notNullValue()]'/>
+		
+</munit:validation>
+	
+</munit:test>
+	<munit:test name="get-customer-info-suite-negetive-test-1" doc:id="56079287-d870-4896-be6a-ece51dad7908" description="Validate if an exception is thrown when the request to query Cosmos DB is failed.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:get-document" doc:id="d5e15983-abc5-49af-890c-8061120ad780" processor="azure-cosmos-db-connector-mule-4:get-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Get Document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="a7ab4142-3984-4731-80e0-a43a74aaa069" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="AZURE-COSMOS-DB-CONNECTOR-MULE-4:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+		
+
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="263a74b0-4d5d-4635-8f74-a79db881cb7e" >
+				<munit:attributes value="#[{uriParams : { customerId : '4d4de7d6-7f5e-4778-9c70-babba6c25c55'}}]" />
+
+			</munit:set-event>
+			<try doc:name="Try" doc:id="981f0c3b-69ed-4169-9ea3-3b7392e6560b" >
+				<flow-ref doc:name="get:\customer\(customerId):customer-api-config" doc:id="a15db41d-0950-43c7-b4a8-5e9d29ce70ae" name="get:\customer\(customerId):customer-api-config" />
+				<error-handler >
+					<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="730e6895-b2a7-497d-bb52-8b3cac9ce8af" />
+				</error-handler>
+			</try>
+		
+</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="1e064cbb-a815-48c3-ad44-a2c1b977df70" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>

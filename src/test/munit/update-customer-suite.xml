@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="update-customer-suite.xml" />
+	<munit:test name="update-customer-suite-positive-test" doc:id="52efb1a5-3336-4ef7-8840-3304917d745a" description="Validate if an customer object is updated in both Salesforce and Cosmos DB.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:query" doc:id="07766761-2fb1-4138-ab5c-8808d09276db" processor="salesforce:query">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Query" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="9bbc7bcd-8954-4202-b798-d4e47cdf6978" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:update" doc:id="079f82f8-b02e-4a79-bd67-d1b086026b8f" processor="salesforce:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Update" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="3ebf1731-6aaa-4c97-b148-164d69880ec9" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:replace-document" doc:id="5ca03dc7-eb10-4cf6-9e71-ff684a7414a7" processor="azure-cosmos-db-connector-mule-4:replace-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Replace Document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c7fdf12e-1522-4fc9-84c5-99480705754f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="3cf7af1d-f0bd-4dae-831b-758c7a1b2241" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+				<munit:attributes value="#[{uriParams : { customerId : '4d4de7d6-7f5e-4778-9c70-babba6c25c55'}}]" />
+			</munit:set-event>
+			<flow-ref doc:name="put:\customer\(customerId):application\json:customer-api-config" doc:id="af88d7f7-8247-486e-99f4-85159eb9d22c" name="put:\customer\(customerId):application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="c959f841-fc0e-4c5b-990f-9fb50c88bdc8" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="update-customer-suite-negetive-test-1" doc:id="c5398420-df3c-48dd-a34c-d3f22686322b" description="Validate if an exception is thrown in case an object is updated in Salesforce and not in Cosmos DB. Corresponingly the update in Salesforce is rolled back.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:query" doc:id="822c7803-9426-4ca8-92ff-61aec5e99913" processor="salesforce:query">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Query" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="9bbc7bcd-8954-4202-b798-d4e47cdf6978" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:update" doc:id="9b48407e-bade-4f97-ad50-fe4044f03537" processor="salesforce:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Update" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="3ebf1731-6aaa-4c97-b148-164d69880ec9" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:replace-document" doc:id="a0b19112-da99-4835-bfa1-884c0b5d2d5d" processor="azure-cosmos-db-connector-mule-4:replace-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Replace Document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c7fdf12e-1522-4fc9-84c5-99480705754f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="AZURE-COSMOS-DB-CONNECTOR-MULE-4:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:update" doc:id="9b8ebde8-e08e-4c6c-adfa-1a02cc9dfd9c" processor="salesforce:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Update" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="39cc12cd-82d3-457d-87c6-7cd5ceb5e844" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:mock-when>
+		
+
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="d6a85d28-9482-4468-bab1-fcc6ae7e91c3" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+				<munit:attributes value="#[{uriParams : { customerId : '4d4de7d6-7f5e-4778-9c70-babba6c25c55'}}]" />
+			</munit:set-event>
+			<flow-ref doc:name="put:\customer\(customerId):application\json:customer-api-config" doc:id="d17cef13-0ef4-471f-8964-c7df869fc347" name="put:\customer\(customerId):application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="f6f0f9b5-5937-403c-9c3c-0d47f572ba96" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="update-customer-suite-negetive-test-2" doc:id="8a661a35-9b97-4d7e-ae44-15529f3de124" description="Validate if an exception is thrown when an object is updated in Salesforce but not in Cosmos DB. In such case try to roll back the changes from Salesforce and if the rollback operation is unsuccessful notify operations team with email.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:query" doc:id="5692a85d-06cf-4e7e-bad2-43a3bae4facd" processor="salesforce:query">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Query" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="9bbc7bcd-8954-4202-b798-d4e47cdf6978" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:update" doc:id="a5f31573-69f1-47ea-969d-6cd8398b77eb" processor="salesforce:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Update" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="3ebf1731-6aaa-4c97-b148-164d69880ec9" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:replace-document" doc:id="1b30aa5b-2767-4d6b-8d41-07600824bbf8" processor="azure-cosmos-db-connector-mule-4:replace-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Replace Document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c7fdf12e-1522-4fc9-84c5-99480705754f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="AZURE-COSMOS-DB-CONNECTOR-MULE-4:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:update" doc:id="bce0a239-b30a-4855-84ea-d281626debc3" processor="salesforce:update">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Update" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="39cc12cd-82d3-457d-87c6-7cd5ceb5e844" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="SALESFORCE:CONNECTIVITY" />
+				</munit-tools:then-return>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="email:send" doc:id="2b9f4aa1-10c0-4149-a47f-ecdfbf449608" processor="email:send">
+				<munit-tools:with-attributes>
+					<munit-tools:with-attribute whereValue="Send" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="acf1cdff-dc3a-4c13-ac58-28929093db7f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		
+
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="8bd7f727-254d-43d6-b230-3cd816a354f9" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+				<munit:attributes value="#[{uriParams : { customerId : '4d4de7d6-7f5e-4778-9c70-babba6c25c55'}}]" />
+			
+</munit:set-event>
+			<flow-ref doc:name="put:\customer\(customerId):application\json:customer-api-config" doc:id="2bae0325-6002-4412-b2e8-131eaa6311f4" name="put:\customer\(customerId):application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that" doc:id="1711a27d-099f-4ce8-8fe3-db17a555f2e1" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+		</munit:validation>
+	</munit:test>
+
+
+</mule>

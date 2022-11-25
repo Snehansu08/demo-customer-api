@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4" xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd">
+	<salesforce:sfdc-config name="Salesforce_Config" doc:name="Salesforce Config" doc:id="aa963a5e-7648-4d68-b33b-81ef2ff13596" >
+		<salesforce:basic-connection username="${secure::salesforce.username}" password="${secure::salesforce.password}" securityToken="${secure::salesforce.token}" url="${salesforce.url}" >
+			<reconnection >
+			</reconnection>
+		</salesforce:basic-connection>
+	</salesforce:sfdc-config>
+	<azure-cosmos-db-connector-mule-4:key-token-config name="Azure_Cosmos_Db_Key_Token_Config" doc:name="Azure Cosmos Db Key Token Config" doc:id="c1c2d750-d1c8-4897-ad9b-8a8ec4056d5a" >
+		<azure-cosmos-db-connector-mule-4:key-token-auth-connection baseUri="${cosmosdb.url}" key="${secure::cosmosdb.token}" version="${cosmosdb.version}" >
+			<reconnection >
+			</reconnection>
+		</azure-cosmos-db-connector-mule-4:key-token-auth-connection>
+	</azure-cosmos-db-connector-mule-4:key-token-config>
+	<email:smtp-config name="Email_SMTP" doc:name="Email SMTP" doc:id="075f4836-4220-4306-9a87-d72d7066bffe" >
+		<email:smtp-connection host="${email.host}" port="${email.port}" user="${secure::email.user}" password="${secure::email.password}" />
+	</email:smtp-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="3107008f-3b12-4af7-b8b5-614b0f2d1474" file="properties\dev.yaml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="0d8de607-7af6-4061-87c3-130dedf4ba5f" file="properties\dev-secure.yaml" key="${mule.key}" />
+	<global-property doc:name="Global Property" doc:id="94de3948-4bb0-40e9-b05a-a50c11ebc04b" name="mule.key" value="NcQfTjWnZr4u7x!A%D*G-KaPdSgUkXp2" />
+</mule>

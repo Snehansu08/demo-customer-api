@@ -1,0 +1,22 @@
+http:
+  host: "0.0.0.0"
+  basepath: "/v1/*"
+  port: "8081"
+  timeout: "30000"
+
+salesforce:
+  url: "https://login.salesforce.com/services/Soap/u/49.0"
+  recordtype: "Customer"
+  
+cosmosdb:
+  url: "https://fuank.documents.azure.com:443/"
+  version: "1"
+  dbid: "testdb"
+  collid: "testcoll" 
+
+email:
+  host: "mail.faunk.com"
+  port: "25"
+  sender: "mule-apis@faunk.com"
+  receiver: "operations-it@faunk.com"
+  subject: "ERROR EMAIL!!!"  

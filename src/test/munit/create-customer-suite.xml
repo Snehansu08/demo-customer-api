@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd">
+	<munit:config name="create-customer-suite.xml" />
+	<munit:test name="create-customer-suite-positive-test" doc:id="51c1f868-fc7b-4899-8857-a62afcfeeb8d" description="Validate if an customer object is created in both Salesforce and Cosmos DB.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:create" doc:id="cf29bdcf-78d0-48ab-a9f5-f95db4b16dc4" processor="salesforce:create">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c928c8d0-a432-41dc-9f05-a11ddcf9a98f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:create-document" doc:id="9b754a4e-30e3-414d-a304-2889d854ae34" processor="azure-cosmos-db-connector-mule-4:create-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer-document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="d4234c24-e2a3-4db8-9cd4-53005e99e633" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="33f63684-8abc-46f4-a14c-62fc729624c7" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="post:\customer:application\json:customer-api-config" doc:id="75e42c2c-f49b-45d5-89d1-5c5dda1b8d84" name="post:\customer:application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="c98916ac-8e9f-4582-95f1-2774e7ceb7e0" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+		</munit:validation>
+	</munit:test>
+	<munit:test name="create-customer-suite-negetive-test-1" doc:id="c8c5c7dc-7d52-497c-91bd-d41a5d99a4cf" description="Validate if an exception is thrown in case an object is created in Salesforce and not in Cosmos DB. Corresponingly the object created in Salesforce is deleted.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:create" doc:id="e2305760-1507-4ce8-94f0-05275cf42e16" processor="salesforce:create">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c928c8d0-a432-41dc-9f05-a11ddcf9a98f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:create-document" doc:id="90c5dc5a-7fd0-4181-a9fd-befa549206bf" processor="azure-cosmos-db-connector-mule-4:create-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer-document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="d4234c24-e2a3-4db8-9cd4-53005e99e633" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="AZURE-COSMOS-DB-CONNECTOR-MULE-4:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:delete" doc:id="d8948081-6781-477b-97a3-ed76870e6f4c" processor="salesforce:delete">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Delete" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="5718ad93-0811-413e-9af8-1055f750c965" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="1337904c-f979-47ac-ae24-34d849d3f303" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+			</munit:set-event>
+			<flow-ref doc:name="post:\customer:application\json:customer-api-config" doc:id="e71767d9-1364-41a5-85b9-7144b4fef3e4" name="post:\customer:application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="0a8cb8c1-ac83-4d3e-b604-2ed743edf374" is='#[MunitTools::notNullValue()]' expression="#[payload]"/>
+
+		</munit:validation>
+	
+</munit:test>
+	<munit:test name="create-customer-suite-negetive-test-2" doc:id="5be4e71e-4216-45c2-b5c4-4d372a56db90" description="Validate if an exception is thrown when an object is created in Salesforce but not in Cosmos DB. In such case try to delete the object from Salesforce and if the rollback operation is unsuccessful notify operations team with email.">
+		<munit:behavior >
+			<munit-tools:mock-when doc:name="salesforce:create" doc:id="853b92eb-f4c8-4dda-b360-9b1d42091a56" processor="salesforce:create">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="c928c8d0-a432-41dc-9f05-a11ddcf9a98f" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="azure-cosmos-db-connector-mule-4:create-document" doc:id="5edb6d00-790d-40ef-b17f-4ccaaa9a46de" processor="azure-cosmos-db-connector-mule-4:create-document">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="create-customer-document" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="d4234c24-e2a3-4db8-9cd4-53005e99e633" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="AZURE-COSMOS-DB-CONNECTOR-MULE-4:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="salesforce:delete" doc:id="01fae520-5674-4621-a2ae-d4484d27bbe2" processor="salesforce:delete">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Delete" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="5718ad93-0811-413e-9af8-1055f750c965" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+				<munit-tools:then-return >
+					<munit-tools:error typeId="SALESFORCE:CONNECTIVITY" />
+				</munit-tools:then-return>
+			
+</munit-tools:mock-when>
+			<munit-tools:mock-when doc:name="email:send" doc:id="417f7f16-76fc-4d14-be2f-25c7f366768f" processor="email:send">
+				<munit-tools:with-attributes >
+					<munit-tools:with-attribute whereValue="Send" attributeName="doc:name" />
+					<munit-tools:with-attribute whereValue="b7449a1f-b230-4c6a-875f-8b593a9f582c" attributeName="doc:id" />
+				</munit-tools:with-attributes>
+			</munit-tools:mock-when>
+		
+
+</munit:behavior>
+		<munit:execution >
+			<munit:set-event doc:name="trigger-create-customer" doc:id="c85af557-ddeb-4b12-9c01-b9c846334071" >
+				<munit:payload value="#[MunitTools::getResourceAsString('munit/customer.json')]" mediaType="application/json" />
+
+			</munit:set-event>
+			<flow-ref doc:name="post:\customer:application\json:customer-api-config" doc:id="c42411bd-26cf-443a-9e62-83719afbae50" name="post:\customer:application\json:customer-api-config"/>
+		</munit:execution>
+		<munit:validation>
+			<munit-tools:assert-that doc:name="Assert that" doc:id="2ce7f91b-c447-45bf-9641-916e4cc4923a" expression="#[payload]" is='#[MunitTools::notNullValue()]'/>
+		
+</munit:validation>
+	
+</munit:test>
+
+
+</mule>

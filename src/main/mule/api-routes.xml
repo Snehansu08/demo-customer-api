@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd 
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd">
+    <http:listener-config name="customer-api-httpListenerConfig">
+        <http:listener-connection host="${http.host}" port="${http.port}" readTimeout="${http.timeout}" protocol="HTTPS">
+			<tls:context >
+				<tls:key-store type="jks" path="keystores/keystore.jks" keyPassword="${secure::keystore.password}" password="${secure::keystore.password}" />
+			</tls:context>
+		</http:listener-connection>
+    </http:listener-config>
+    <apikit:config name="customer-api-config" api="customer-api.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <flow name="customer-api-main" doc:id="a85a5095-78dd-4bcf-9b17-cabcf0a58332">
+        <http:listener config-ref="customer-api-httpListenerConfig" path="${http.basepath}">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body><![CDATA[#[payload]]]></http:body>
+                <http:headers><![CDATA[#[vars.outboundHeaders default {}]]]></http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="customer-api-config" />
+		<error-handler ref="global-error-handler-flow" />
+    </flow>
+    <flow name="put:\customer\(customerId):application\json:customer-api-config" doc:id="84983a25-2453-4b64-ac82-1540365795b0">
+		<flow-ref doc:name="update-customer-flow" doc:id="c64ff61b-2b55-413a-927b-63ea8ed6bb7f" name="update-customer-flow"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="4813ae8f-db28-406b-8262-b6c0cbb9756d" >
+				<flow-ref doc:name="common-error-flow" doc:id="67c4446c-40e5-4635-bb7f-bac84a5edff0" name="common-error-flow" />
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+    <flow name="get:\customer\(customerId):customer-api-config" doc:id="93f92c5e-b577-4462-ab4c-7fb49df06050">
+		<flow-ref doc:name="get-customer-info-flow" doc:id="db73a808-5c52-4574-bf8c-01186b08b311" name="get-customer-info-flow"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="71a428b9-f14e-48fe-8be8-b3aa0f82b952" >
+				<flow-ref doc:name="common-error-flow" doc:id="cf11d80e-9655-461c-9b0e-68ecf482ed50" name="common-error-flow" />
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+    <flow name="post:\customer:application\json:customer-api-config" doc:id="f2414c36-a63c-4664-8a61-7602aa4d9fb7">
+		<flow-ref doc:name="create-customer-flow" doc:id="820ebc64-2683-4a70-9f24-4d1498680c4e" name="create-customer-flow"/>
+		<error-handler >
+			<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="6014f4d1-6072-47b2-977b-5c319567408e" >
+				<flow-ref doc:name="common-error-flow" doc:id="d10d240d-f1b3-457b-ab8f-1c0a9adbcde8" name="common-error-flow"/>
+			</on-error-propagate>
+		</error-handler>
+    </flow>
+</mule>

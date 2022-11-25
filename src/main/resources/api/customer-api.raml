@@ -1,0 +1,51 @@
+#%RAML 1.0
+title: Customer API
+baseUri: https://localhost:8081/{version}
+version: v1
+
+securitySchemes:
+  basicauth: !include /securityScheme/basicAuth.raml
+
+uses:
+  error: /libraries/errorLibraries.raml
+
+types:
+  customer.request: !include /dataType/requests/customer.raml
+  customer.response: !include /dataType/responses/customer.raml
+  customer.info.response: !include /dataType/responses/customerInfo.raml
+
+traits:
+  customer:
+    securedBy: [basicauth]
+    is: [error.errorhandler]
+    body:
+      application/json:
+        type: customer.request
+        example: !include examples/requests/customer.json
+    responses: 
+      200:
+        body:
+          application/json:
+            type: customer.response
+            example: !include examples/responses/customer.json
+
+/customer:
+  post:
+    description: Reseller can create a customer.
+    is: [customer]      
+
+  /{customerId}:
+      put:
+        description: Reseller can update a customer by customer id.
+        is: [customer]
+      get:
+        description: Reseller can get information of a customer by customer id.
+        securedBy: [basicauth]
+        is: [error.errorhandler]
+        responses: 
+          200:
+            body:
+              application/json:
+                type: customer.info.response
+                example: !include examples/responses/customerInfo.json
+        

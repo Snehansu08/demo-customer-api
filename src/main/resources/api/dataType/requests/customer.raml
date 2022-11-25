@@ -1,0 +1,62 @@
+#%RAML 1.0 DataType
+
+usage: This provides a type of a Customer.
+
+type: object
+properties:
+  personalInformation:
+    type: object
+    required: true
+    properties:
+      firstName:
+        type: string
+        required: true
+        example: "Ulrich"
+        description: First name of the customer.
+      lastName:
+        type: string
+        required: true
+        example: "Nielsen"
+        description: Last name of the customer.
+      companyName:
+        type: string
+        required: true
+        example: "E-ffoc"
+        description: Name of the company the customer belongs.
+      email:
+        type: string
+        required: true
+        example: "ulrichN@effoc.com"
+        description: Email id of the customer.
+      phone:
+        type: string
+        required: true
+        example: "+494341927420"
+        description: Phone number of the customer.
+  address :
+    type: array
+    minItems: 1
+    items:
+      type: object
+      description: Addresses of the customer.
+      properties:
+        street:
+          type: string
+          required: true
+          example: "Steinbrueckstrasse"
+          description: Name of the street.
+        houseNumber:
+          type: number
+          required: true
+          example: 114
+          description: House number of the customer.
+        city:
+          type: string
+          required: true
+          example: "Nuremberg"
+          description: Name of the city.
+        postalCode:
+          type: string
+          required: true
+          example: "90408"
+          description: Postal code.

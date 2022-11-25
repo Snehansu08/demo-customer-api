@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<sub-flow name="create-customer-flow" doc:id="f83593c2-27d6-4596-8c95-db877604058d" >
+		<ee:transform doc:name="generate-customerId" doc:id="e923ca5a-eaca-4840-90b5-418108c13371" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="customerId" ><![CDATA[%dw 2.0
+output application/java
+---
+uuid()]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="create-request-messages" doc:id="ef59b268-5cc5-40b8-8d5f-d061890c4018" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="salesforceRequest" ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	customerId: vars.customerId,
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	companyName: payload.companyName,
+	email: payload.email,
+	phaone: payload.phone
+}]]]></ee:set-variable>
+				<ee:set-variable variableName="cosmosdbRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{id: vars.customerId, customerId: vars.customerId} ++ payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="start" doc:id="bb92fc56-4fb9-4db4-a7ac-d893aba6d016" message="The request is received, creating the record in Salesforce." />
+		<salesforce:create doc:name="create-customer" doc:id="c928c8d0-a432-41dc-9f05-a11ddcf9a98f" config-ref="Salesforce_Config" type="${salesforce.recordtype}">
+			<salesforce:records><![CDATA[#[vars.salesforceRequest]]]></salesforce:records>
+		</salesforce:create>
+		<logger level="INFO" doc:name="after-salesforce-create" doc:id="d199a686-b410-4875-b0db-db2d2fac3a2f" message="The object is successfully created in Salesforce." />
+		<try doc:name="Try" doc:id="595e25ac-2853-4260-ad3d-a0bf381d16a0">
+			<azure-cosmos-db-connector-mule-4:create-document doc:name="create-customer-document" doc:id="d4234c24-e2a3-4db8-9cd4-53005e99e633" config-ref="Azure_Cosmos_Db_Key_Token_Config" dbIdUriParam="${cosmosdb.dbid}" collIdUriParam="${cosmosdb.collid}">
+				<azure-cosmos-db-connector-mule-4:create-document-body><![CDATA[#[vars.cosmosdbRequest]]]></azure-cosmos-db-connector-mule-4:create-document-body>
+		</azure-cosmos-db-connector-mule-4:create-document>
+			<logger level="INFO" doc:name="after-cosmosdb-create" doc:id="28343b63-8035-466c-b611-075da02d1b84" message="The object is successfully created in CosmosDB." />
+			<ee:transform doc:name="response" doc:id="9a69e7ee-dd8c-40ff-a2db-8be8a2bc85eb">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "customerId": vars.customerId,
+  "message": "Customer created successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c76e2a8a-be5c-4afe-ba1f-c7a1a3be51a1" >
+					<try doc:name="Try" doc:id="752940c1-3021-4a7b-969f-dfe039e66bac">
+						<logger level="INFO" doc:name="rollback-create" doc:id="3725aff7-c795-44be-982a-e16bbe4f32b6" message="The CosmosDB transaction is failed, rollback create in Salesforce." />
+						<salesforce:delete doc:name="Delete" doc:id="5718ad93-0811-413e-9af8-1055f750c965" config-ref="Salesforce_Config">
+						<salesforce:ids><![CDATA[#[%dw 2.0
+output application/java
+---
+[vars.customerId]]]]></salesforce:ids>
+					</salesforce:delete>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="c04361a3-8ab7-4dab-9735-478c30a20a08" type="ANY">
+								<async doc:name="Async" doc:id="92633747-5a6f-46cc-abb5-cd2c0d142613">
+									<logger level="INFO" doc:name="rollback-failed" doc:id="12858c0f-41f1-4052-b583-ed2b10a8a1ed" message="The rollback operation is failed, notifying operations for manual rollback." />
+									<ee:transform doc:name="email-body" doc:id="d3aeb092-8fc5-42aa-88fc-621accd59c95">
+										<ee:message>
+											<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+"<!DOCTYPE html><html><head><title>Page Title</title></head><body><p><b>Customer Id:</b> " ++ vars.customerId ++ "</p><p><b>Message:</b> The server encountered an error to rollback the create operation, manual rollback is required.</p></body>
+</html>"]]></ee:set-payload>
+										</ee:message>
+									</ee:transform>
+									<email:send doc:name="Send" doc:id="b7449a1f-b230-4c6a-875f-8b593a9f582c" config-ref="Email_SMTP" fromAddress="${email.sender}" subject="${email.subject}">
+										<email:to-addresses>
+											<email:to-address value="${email.receiver}" />
+										</email:to-addresses>
+										<email:body contentType="text/html" />
+									</email:send>
+								</async>
+							</on-error-continue>
+						</error-handler>
+					</try>
+					<ee:transform doc:name="error-response" doc:id="7a42e506-6656-401f-b111-c68d9fe34b32">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"errorMessage": "Server Error",
+    "errorDetails": "There was an error encountered while creating the customer in the system."
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="httpStatus"><![CDATA[500]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</on-error-continue>
+			</error-handler>
+		</try>
+	</sub-flow>
+</mule>

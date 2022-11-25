@@ -1,0 +1,14 @@
+salesforce:
+  username: "![cxS7YothH3RN5ZlWRoAxUQ==]"
+  password: "![cxS7YothH3RN5ZlWRoAxUQ==]"
+  token: "![cxS7YothH3RN5ZlWRoAxUQ==]"
+  
+cosmosdb:
+  token: "![cxS7YothH3RN5ZlWRoAxUQ==]"
+  
+email:
+  user: "![cxS7YothH3RN5ZlWRoAxUQ==]"
+  password: "![cxS7YothH3RN5ZlWRoAxUQ==]"  
+  
+keystore:
+  password: "![yxhvh5OZOHe8X+5S146y8w==]"          

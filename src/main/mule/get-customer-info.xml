@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4"
+	xmlns:email="http://www.mulesoft.org/schema/mule/email"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd 
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd">
+	<sub-flow name="get-customer-info-flow" doc:id="f8a5df6f-d89d-40a0-8458-b38c88decf89" >
+		<ee:transform doc:name="customerId" doc:id="04620ca3-6945-4aa8-858e-8fb73134e5a2" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="customerId" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.uriParams.'customerId']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="start" doc:id="eb8734fb-da0f-449f-a2a9-5a08ee0f5840" message="The request is received, connecting to CosmosDB."/>
+		<azure-cosmos-db-connector-mule-4:get-document doc:name="Get Document" doc:id="a7ab4142-3984-4731-80e0-a43a74aaa069" config-ref="Azure_Cosmos_Db_Key_Token_Config" dbIdUriParam="${cosmosdb.dbid}" collIdUriParam="${cosmosdb.collid}" docIdUriParam="#[vars.customerId]"/>
+		<logger level="INFO" doc:name="end" doc:id="58a3d596-e2fb-4cfd-811c-f5d247661851" message="The request is processed successfully."/>
+		<ee:transform doc:name="response" doc:id="9f42d278-9c2d-4659-8733-6b0c82e5280e" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "customerId": payload.customerId,
+  "personalInformation": payload.personalInformation mapObject {
+  	($): $$
+  },
+  "address": payload.address map($)
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+</mule>

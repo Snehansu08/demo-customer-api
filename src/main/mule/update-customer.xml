@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:azure-cosmos-db-connector-mule-4="http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4"
+	xmlns:salesforce="http://www.mulesoft.org/schema/mule/salesforce"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/salesforce http://www.mulesoft.org/schema/mule/salesforce/current/mule-salesforce.xsd
+http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4 http://www.mulesoft.org/schema/mule/azure-cosmos-db-connector-mule-4/current/mule-azure-cosmos-db-connector-mule-4.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd">
+	<sub-flow name="update-customer-flow" doc:id="82776c62-45d0-41e0-822c-e089a906fba5" >
+		<ee:transform doc:name="customerId" doc:id="99297c35-1d12-48ee-a5e7-ea16c056fcc7" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="customerId" ><![CDATA[%dw 2.0
+output application/java
+---
+attributes.uriParams.'customerId']]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="create-request-messages" doc:id="85bcab89-4475-42a9-98d1-af623d1bfab9" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="salesforceRequest" ><![CDATA[%dw 2.0
+output application/java
+---
+[{
+	customerId: vars.customerId,
+	firstName: payload.firstName,
+	lastName: payload.lastName,
+	companyName: payload.companyName,
+	email: payload.email,
+	phaone: payload.phone
+}]]]></ee:set-variable>
+				<ee:set-variable variableName="cosmosdbRequest" ><![CDATA[%dw 2.0
+output application/json
+---
+{id: vars.customerId, customerId: vars.customerId} ++ payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="start" doc:id="12fed993-a0bb-4049-93ad-22cf248dae07" message="The request is received, updating the record in Salesforce." />
+		<salesforce:query doc:name="Query" doc:id="9bbc7bcd-8954-4202-b798-d4e47cdf6978" config-ref="Salesforce_Config" target="initialObject">
+			<salesforce:salesforce-query ><![CDATA[SELECT FIELDS(ALL) FROM Account WHERE customeId=:custId]]></salesforce:salesforce-query>
+			<salesforce:parameters ><![CDATA[#[output application/java
+---
+{
+	"custId" : vars.customerId
+}]]]></salesforce:parameters>
+		</salesforce:query>
+		<salesforce:update doc:name="Update" doc:id="3ebf1731-6aaa-4c97-b148-164d69880ec9" config-ref="Salesforce_Config" type="Customer">
+			<salesforce:records ><![CDATA[#[vars.salesforceRequest]]]></salesforce:records>
+		</salesforce:update>
+		<logger level="INFO" doc:name="after-salesforce-update" doc:id="c50b5e62-9777-461f-bb89-0f9afa8f7485" message="The object is successfully updated in Salesforce." />
+		<try doc:name="Try" doc:id="74ad90b9-9ad6-4dc8-8ee1-72b64b2d93a4">
+			<azure-cosmos-db-connector-mule-4:replace-document doc:name="Replace Document" doc:id="c7fdf12e-1522-4fc9-84c5-99480705754f" config-ref="Azure_Cosmos_Db_Key_Token_Config" dbIdUriParam="${cosmosdb.dbid}" collIdUriParam="${cosmosdb.collid}" docIdUriParam="#[vars.customerId]">
+				<azure-cosmos-db-connector-mule-4:replace-document-body ><![CDATA[#[vars.cosmosdbRequest]]]></azure-cosmos-db-connector-mule-4:replace-document-body>
+			</azure-cosmos-db-connector-mule-4:replace-document>
+			<logger level="INFO" doc:name="after-cosmosdb-update" doc:id="bf29370e-9083-4125-bec2-f285683fd669" message="The object is successfully updated in CosmosDB."/>
+			<ee:transform doc:name="response" doc:id="21ba3554-762a-43c4-bb7f-238db37c4bc7">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "customerId": vars.customerId,
+  "message": "Customer created successfully"
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+			<error-handler >
+				<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="9b4bfed5-8c93-4df9-b8d2-f9d6d54d912c" >
+					<try doc:name="Try" doc:id="0dc893fb-7fee-45be-9713-62dc4008c49b">
+						<logger level="INFO" doc:name="rollback-update" doc:id="cfa3d77d-949f-424f-a685-3f39122b362c" message="The CosmosDB transaction is failed, rollback update in Salesforce." />
+						<salesforce:update type="Customer" doc:name="Update" doc:id="39cc12cd-82d3-457d-87c6-7cd5ceb5e844" config-ref="Salesforce_Config">
+							<salesforce:records><![CDATA[#[vars.initialObject]]]></salesforce:records>
+						</salesforce:update>
+						<error-handler>
+							<on-error-continue enableNotifications="true" logException="true" doc:name="On Error Continue" doc:id="a9cb437b-657a-42ae-90d3-c7f9070cf273">
+								<async doc:name="Async" doc:id="4c58cb71-81c0-4c5b-8a24-618eaaefa742">
+						<logger level="INFO" doc:name="rollback-update-failed" doc:id="936e87f9-8ac2-4cf0-8c02-20d003502b79" message="The rollback operation is failed, notifying operations for manual rollback." />
+									<ee:transform doc:name="email-body" doc:id="4cbbb531-471a-41ba-9c22-3583751b6be3">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output text/plain
+---
+"<!DOCTYPE html><html><head><title>Page Title</title></head><body><p><b>Customer Id:</b> " ++ vars.customerId ++ "</p><p><b>Message:</b> The server encountered an error to rollback the update operation, manual rollback is required.</p></body>
+</html>"]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+									<email:send doc:name="Send" doc:id="acf1cdff-dc3a-4c13-ac58-28929093db7f" config-ref="Email_SMTP" fromAddress="${email.sender}" subject="${email.subject}">
+							<email:to-addresses>
+								<email:to-address value="${email.receiver}" />
+							</email:to-addresses>
+							<email:body contentType="text/html" />
+						</email:send>
+					</async>
+							</on-error-continue>
+						</error-handler>
+					</try>
+					<ee:transform doc:name="error-response" doc:id="e6b0b61b-8480-463b-befe-e2e0921f546d">
+						<ee:message>
+							<ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"errorMessage": "Server Error",
+    "errorDetails": "There was an error encountered while updating the customer in the system."
+}]]></ee:set-payload>
+						</ee:message>
+						<ee:variables>
+							<ee:set-variable variableName="httpStatus"><![CDATA[500]]></ee:set-variable>
+						</ee:variables>
+					</ee:transform>
+				</on-error-continue>
+			
+</error-handler>
+		</try>
+	</sub-flow>
+</mule>
